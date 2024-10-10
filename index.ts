@@ -4,7 +4,9 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import chromeLambda from 'chrome-aws-lambda';
 
 const app = express();
-const port = 3000;
+
+// Cambié el puerto para que use el valor de la variable de entorno
+const port = process.env.PORT || 3000;
 
 puppeteer.use(StealthPlugin());
 
@@ -95,7 +97,7 @@ estaciones.forEach(estacion => {
   });
 });
 
-// Iniciar el servidor
+// Iniciar el servidor en el puerto correcto
 app.listen(port, () => {
   console.log(`API inicializada en http://localhost:${port}`);
 });
