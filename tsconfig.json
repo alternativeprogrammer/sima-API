@@ -1,15 +1,17 @@
 {
     "compilerOptions": {
-      "target": "es6",
-      "module": "commonjs",
-      "moduleResolution": "node",
-      "outDir": "./dist",
-      "rootDir": "./",
-      "esModuleInterop": true,
+      "target": "ES6",
+      "module": "CommonJS",
       "strict": true,
+      "esModuleInterop": true,
       "skipLibCheck": true,
-      "forceConsistentCasingInFileNames": true
+      "forceConsistentCasingInFileNames": true,
+      "outDir": "./dist",
+      "rootDir": "./src",
+      "resolveJsonModule": true,
+      "noEmitOnError": true
     },
-    "include": ["index.ts"]
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules"]
   }
   
