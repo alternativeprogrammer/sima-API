@@ -1,45 +1,39 @@
 import express from 'express';
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import chromeLambda from 'chrome-aws-lambda';
 
 const app = express();
 const port = 3000;
 
-// Función para lanzar el navegador con las opciones correctas
+puppeteer.use(StealthPlugin());
+
+// Lista de estaciones
+const estaciones = [
+  { name: "Centro", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=CENTRO' },
+  { name: "Sureste", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=SURESTE' },
+  // Agrega más estaciones si es necesario
+];
+
+// Función para lanzar el navegador con las opciones correctas para Vercel o local
 const launchBrowser = async () => {
   let options = {};
 
   if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
-    // Si estamos en AWS Lambda
     options = {
-      args: [
-        ...chromeLambda.args,
-        "--hide-scrollbars",
-        "--disable-web-security",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-software-rasterizer",
-        "--no-first-run",
-      ],
+      args: [...chromeLambda.args, '--hide-scrollbars', '--disable-web-security'],
       defaultViewport: chromeLambda.defaultViewport,
       executablePath: await chromeLambda.executablePath,
       headless: true,
       ignoreHTTPSErrors: true,
     };
   } else {
-    // Si estamos en desarrollo local
     options = {
-      headless: true,  // Mantenerlo sin interfaz gráfica
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],  // Algunos entornos requieren estas opciones
+      headless: true, // Para desarrollo local
     };
   }
 
-  try {
-    return await puppeteer.launch(options);
-  } catch (error) {
-    console.error('Error al lanzar el navegador:', error);
-    throw error;
-  }
+  return puppeteer.launch(options);
 };
 
 // Ruta inicial
@@ -47,24 +41,22 @@ app.get('/', (req, res) => {
   res.send('API inicializada');
 });
 
-// Función para obtener los datos de la estación
+// Función para obtener datos de una estación
 const obtenerDatosEstacion = async (dataUrl: string) => {
   const browser = await launchBrowser();
   const page = await browser.newPage();
-
-  // Navegar a la URL de la estación
   await page.goto(dataUrl, {
     waitUntil: 'networkidle2',
-    timeout: 60000,
+    timeout: 60000
   });
 
-  // Esperar hasta que la tabla sea visible y contenga datos válidos
+  // Esperar a que los datos sean visibles y que no contengan 'No datos'
   await page.waitForFunction(() => {
     const tbody = document.querySelector('#tablaIMK_wrapper tbody') as HTMLElement;
     return tbody && tbody.innerText.trim().length > 0 && !tbody.innerText.includes('No datos');
   });
 
-  // Extraer los datos de la tabla
+  // Obtener los datos de la tabla
   const jsonData = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('#tablaIMK_wrapper tbody tr'));
     return rows.map(row => {
@@ -81,14 +73,7 @@ const obtenerDatosEstacion = async (dataUrl: string) => {
   return jsonData;
 };
 
-// Lista de estaciones
-const estaciones = [
-  { name: "Centro", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=CENTRO' },
-  { name: "Sureste", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=SURESTE' },
-  // Añadir más estaciones aquí
-];
-
-// Crear rutas para cada estación
+// Crear rutas específicas para cada estación
 estaciones.forEach(estacion => {
   app.get(`/data/${estacion.name.toLowerCase()}`, async (req, res) => {
     try {
