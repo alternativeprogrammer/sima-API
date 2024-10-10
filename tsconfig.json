@@ -7,11 +7,10 @@
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,
       "outDir": "./dist",
-      "rootDir": "./src",
-      "resolveJsonModule": true,
-      "noEmitOnError": true
+      "rootDir": "./",
+      "resolveJsonModule": true
     },
-    "include": ["src/**/*.ts"],
+    "include": ["*.ts"],  // Cambiado para incluir los archivos TS en la raíz
     "exclude": ["node_modules"]
   }
   
