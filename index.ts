@@ -10,20 +10,36 @@ const launchBrowser = async () => {
   let options = {};
 
   if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+    // Si estamos en AWS Lambda
     options = {
-      args: [...chromeLambda.args, "--hide-scrollbars", "--disable-web-security"],
+      args: [
+        ...chromeLambda.args,
+        "--hide-scrollbars",
+        "--disable-web-security",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-software-rasterizer",
+        "--no-first-run",
+      ],
       defaultViewport: chromeLambda.defaultViewport,
       executablePath: await chromeLambda.executablePath,
       headless: true,
       ignoreHTTPSErrors: true,
     };
   } else {
+    // Si estamos en desarrollo local
     options = {
-      headless: true,
+      headless: true,  // Mantenerlo sin interfaz gráfica
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],  // Algunos entornos requieren estas opciones
     };
   }
 
-  return puppeteer.launch(options);
+  try {
+    return await puppeteer.launch(options);
+  } catch (error) {
+    console.error('Error al lanzar el navegador:', error);
+    throw error;
+  }
 };
 
 // Ruta inicial
@@ -31,20 +47,24 @@ app.get('/', (req, res) => {
   res.send('API inicializada');
 });
 
-// Función para obtener datos de la estación
+// Función para obtener los datos de la estación
 const obtenerDatosEstacion = async (dataUrl: string) => {
   const browser = await launchBrowser();
   const page = await browser.newPage();
+
+  // Navegar a la URL de la estación
   await page.goto(dataUrl, {
     waitUntil: 'networkidle2',
-    timeout: 60000
+    timeout: 60000,
   });
 
+  // Esperar hasta que la tabla sea visible y contenga datos válidos
   await page.waitForFunction(() => {
     const tbody = document.querySelector('#tablaIMK_wrapper tbody') as HTMLElement;
     return tbody && tbody.innerText.trim().length > 0 && !tbody.innerText.includes('No datos');
   });
 
+  // Extraer los datos de la tabla
   const jsonData = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('#tablaIMK_wrapper tbody tr'));
     return rows.map(row => {
