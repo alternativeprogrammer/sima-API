@@ -4,13 +4,8 @@
   "description": " A basic starter for an express.js API with Typescript",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "ts-node-dev src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "start:dist": "node dist/src/index.js",
-    "lint": "eslint --fix src test",
-    "test": "jest",
-    "typecheck": "tsc --noEmit"
+  "dev": "ts-node-dev src/index.ts",
+  "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "CJ R. <cj@null.computer> (https://w3cj.now.sh)",

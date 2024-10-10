@@ -8,7 +8,10 @@ export const obtenerDatosEstacion = async (dataUrl: string): Promise<any> => {
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-  });  
+  });
+  
+  console.log(await browser.version());
+  
   const page = await browser.newPage();
   await page.goto(dataUrl, {
     waitUntil: 'networkidle2',
