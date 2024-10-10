@@ -6,6 +6,24 @@ import chromium from 'chrome-aws-lambda';
 const app = express();
 const port = 3000;
 
+// Define the estaciones array with proper types
+const estaciones = [
+  { name: "Centro", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=CENTRO' },
+  { name: "Sureste", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=SURESTE' },
+  { name: "Noreste", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=NORESTE' },
+  { name: "Noroeste", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=NOROESTE' },
+  { name: "Suroeste", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=SUROESTE' },
+  { name: "Noroeste2", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=GARCIA' },
+  { name: "Norte", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=NORTE' },
+  { name: "Noreste2", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=NORESTE2' },
+  { name: "Sureste2", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=SURESTE2' },
+  { name: "Suroeste2", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=[SAN%20Pedro]' },
+  { name: "Sureste3", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=SURESTE3' },
+  { name: "Norte2", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=NORTE2' },
+  { name: "Sur", dataUrl: 'http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=SUR' },
+] as const; // This makes the types immutable
+
+
 puppeteer.use(StealthPlugin());
 
 // Function to launch Puppeteer with the right executable
@@ -50,7 +68,7 @@ const obtenerDatosEstacion = async (dataUrl: string) => {
 };
 
 // API Routes for each station
-estaciones.forEach(estacion => {
+estaciones.forEach((estacion: { name: string, dataUrl: string }) => {
   app.get(`/data/${estacion.name.toLowerCase()}`, async (req, res) => {
     try {
       const jsonData = await obtenerDatosEstacion(estacion.dataUrl);
@@ -61,6 +79,7 @@ estaciones.forEach(estacion => {
     }
   });
 });
+
 
 app.listen(port, () => {
   console.log(`API running on http://localhost:${port}`);
