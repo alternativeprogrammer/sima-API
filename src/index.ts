@@ -1,21 +1,8 @@
-// src/index.ts
-import express from 'express';
-import estacionesRouter from './routes/estaciones';
+import app from './app';
 
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.use(express.json());
-
-// Ruta inicial
-app.get('/', (req, res) => {
-  res.send('API inicializada');
-});
-
-// Rutas para las estaciones
-app.use('/api', estacionesRouter);
-
-// Iniciar el servidor
+const port = process.env.PORT || 5000;
 app.listen(port, () => {
-  console.log(`API inicializada en http://localhost:${port}`);
+  /* eslint-disable no-console */
+  console.log(`Listening: http://localhost:${port}`);
+  /* eslint-enable no-console */
 });
