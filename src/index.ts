@@ -1,6 +1,6 @@
-const express = require('express');
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+import express from 'express';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 const app = express();
 const port = 3000;
@@ -30,21 +30,17 @@ app.get('/', (req, res) => {
 });
 
 // Función para obtener datos de una estación
-const obtenerDatosEstacion = async (dataUrl) => {
-  const browser = await puppeteer.launch({ 
-    headless: true, 
-    args: ['--no-sandbox', '--disable-setuid-sandbox'] // Ajustes para Vercel
-  });
-  
+const obtenerDatosEstacion = async (dataUrl: string) => {
+  const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
   await page.goto(dataUrl, {
     waitUntil: 'networkidle2',
-    timeout: 120000 // Aumenta el tiempo de espera si es necesario
+    timeout: 60000
   });
 
   // Esperar a que los datos sean visibles y que no contengan 'No datos'
   await page.waitForFunction(() => {
-    const tbody = document.querySelector('#tablaIMK_wrapper tbody');
+    const tbody = document.querySelector('#tablaIMK_wrapper tbody') as HTMLElement; // Casting a HTMLElement
     return tbody && tbody.innerText.trim().length > 0 && !tbody.innerText.includes('No datos');
   });
 
