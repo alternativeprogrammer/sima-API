@@ -20,6 +20,7 @@ const launchBrowser = async () => {
   let options = {};
 
   if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+    // Ejecutar en el entorno de AWS Lambda
     options = {
       args: [...chromeLambda.args, '--hide-scrollbars', '--disable-web-security'],
       defaultViewport: chromeLambda.defaultViewport,
@@ -28,8 +29,9 @@ const launchBrowser = async () => {
       ignoreHTTPSErrors: true,
     };
   } else {
+    // Ejecutar en desarrollo local
     options = {
-      headless: true, // Para desarrollo local
+      headless: true, // Mantener en headless para desarrollo
     };
   }
 
@@ -45,32 +47,39 @@ app.get('/', (req, res) => {
 const obtenerDatosEstacion = async (dataUrl: string) => {
   const browser = await launchBrowser();
   const page = await browser.newPage();
-  await page.goto(dataUrl, {
-    waitUntil: 'networkidle2',
-    timeout: 60000
-  });
-
-  // Esperar a que los datos sean visibles y que no contengan 'No datos'
-  await page.waitForFunction(() => {
-    const tbody = document.querySelector('#tablaIMK_wrapper tbody') as HTMLElement;
-    return tbody && tbody.innerText.trim().length > 0 && !tbody.innerText.includes('No datos');
-  });
-
-  // Obtener los datos de la tabla
-  const jsonData = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll('#tablaIMK_wrapper tbody tr'));
-    return rows.map(row => {
-      const cells = row.querySelectorAll('td');
-      return {
-        parametro: cells[0]?.innerText.trim(),
-        valor: cells[1]?.innerText.trim(),
-        descriptor: cells[2]?.innerText.trim(),
-      };
+  
+  try {
+    await page.goto(dataUrl, {
+      waitUntil: 'networkidle2',
+      timeout: 60000, // Esperar hasta que la red esté inactiva o tiempo de espera (60s)
     });
-  });
 
-  await browser.close();
-  return jsonData;
+    // Esperar a que los datos sean visibles y que no contengan 'No datos'
+    await page.waitForFunction(() => {
+      const tbody = document.querySelector('#tablaIMK_wrapper tbody') as HTMLElement;
+      return tbody && tbody.innerText.trim().length > 0 && !tbody.innerText.includes('No datos');
+    });
+
+    // Obtener los datos de la tabla
+    const jsonData = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('#tablaIMK_wrapper tbody tr'));
+      return rows.map(row => {
+        const cells = row.querySelectorAll('td');
+        return {
+          parametro: cells[0]?.innerText.trim(),
+          valor: cells[1]?.innerText.trim(),
+          descriptor: cells[2]?.innerText.trim(),
+        };
+      });
+    });
+
+    return jsonData;
+  } catch (error) {
+    console.error('Error al obtener los datos de la estación:', error);
+    throw new Error('Error al procesar la solicitud para la estación');
+  } finally {
+    await browser.close();
+  }
 };
 
 // Crear rutas específicas para cada estación
