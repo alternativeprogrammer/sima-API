@@ -1,7 +1,7 @@
 import express from 'express';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import chromeLambda from 'chrome-aws-lambda';
+const chromium = require('chrome-aws-lambda');
 
 const app = express();
 
@@ -18,27 +18,15 @@ const estaciones = [
 ];
 
 // Función para lanzar el navegador con las opciones correctas para Vercel o local
-const launchBrowser = async () => {
-  let options = {};
+async function launchBrowser() {
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath,
+    headless: true,
+  });
 
-  if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
-    // Ejecutar en el entorno de AWS Lambda
-    options = {
-      args: [...chromeLambda.args, '--hide-scrollbars', '--disable-web-security'],
-      defaultViewport: chromeLambda.defaultViewport,
-      executablePath: await chromeLambda.executablePath,
-      headless: true,
-      ignoreHTTPSErrors: true,
-    };
-  } else {
-    // Ejecutar en desarrollo local
-    options = {
-      headless: true, // Mantener en headless para desarrollo
-    };
-  }
-
-  return puppeteer.launch(options);
-};
+  return browser;
+}
 
 // Ruta inicial
 app.get('/', (req, res) => {
