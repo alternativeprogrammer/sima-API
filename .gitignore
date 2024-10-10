@@ -27,3 +27,4 @@ Thumbs.db
 
 # Package-lock (optional if you prefer not to track it)
 package-lock.json
+.vercel
