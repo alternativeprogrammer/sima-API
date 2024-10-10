@@ -31,11 +31,15 @@ app.get('/', (req, res) => {
 
 // Función para obtener datos de una estación
 const obtenerDatosEstacion = async (dataUrl) => {
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({ 
+    headless: true, 
+    args: ['--no-sandbox', '--disable-setuid-sandbox'] // Ajustes para Vercel
+  });
+  
   const page = await browser.newPage();
   await page.goto(dataUrl, {
     waitUntil: 'networkidle2',
-    timeout: 60000
+    timeout: 120000 // Aumenta el tiempo de espera si es necesario
   });
 
   // Esperar a que los datos sean visibles y que no contengan 'No datos'

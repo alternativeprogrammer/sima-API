@@ -1,15 +1,14 @@
 {
     "functions": {
-      "api/**/*.js": {
-        "memory": 128,
-        "maxDuration": 10
+      "api/users/**/*.js": {
+        "maxDuration": 30
       }
     },
     "routes": [
       {
         "src": "/data",
-        "dest": "/api/test.js"
-      }
+        "dest": "/api/users/test.js"
+    }
     ]
   }
   
