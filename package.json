@@ -1,19 +1,21 @@
 {
   "name": "sima-api",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API for SIMA air quality data",
+  "main": "api/stations.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "node api/stations.js",
+    "dev": "nodemon api/stations.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "chrome-aws-lambda": "^6",
-    "express": "^4.21.1",
-    "puppeteer": "^23.6.0",
-    "puppeteer-core": "^6"
+    "puppeteer-core": "^10.4.0",
+    "@sparticuz/chromium": "^121.0.0",
+    "chrome-aws-lambda": "^10.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
