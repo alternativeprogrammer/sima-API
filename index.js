@@ -1,22 +1,12 @@
-const express = require("express");
-const app = express();
+const chrome = require("chrome-aws-lambda");
+const puppeteer = require("puppeteer-core");
 
-let chrome = {};
-let puppeteer;
-
-if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
-  chrome = require("chrome-aws-lambda");
-  puppeteer = require("puppeteer-core");
-} else {
-  puppeteer = require("puppeteer");
-}
-
-app.get("/api/stations", async (req, res) => {
-  const stationName = req.query.station || 'CENTRO'; // Estación por defecto
+exports.handler = async (event) => {
+  const stationName = event.queryStringParameters?.station || 'CENTRO'; // Estación por defecto
   const url = `http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`;
 
   let options = {};
-  
+
   if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
     options = {
       args: [...chrome.args, "--hide-scrollbars", "--disable-web-security"],
@@ -59,21 +49,25 @@ app.get("/api/stations", async (req, res) => {
     await browser.close();
 
     if (jsonData.length === 0) {
-      return res.status(404).json({ message: 'No hay datos disponibles.' });
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ message: 'No hay datos disponibles.' }),
+      };
     }
 
-    res.json({ station: stationName, data: jsonData });
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ station: stationName, data: jsonData }),
+    };
+
   } catch (error) {
     console.error('Error scraping data:', error);
     if (browser) {
       await browser.close();
     }
-    res.status(500).json({ error: 'Error scraping data' });
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Error scraping data' }),
+    };
   }
-});
-
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Server started");
-});
-
-module.exports = app;
+};
