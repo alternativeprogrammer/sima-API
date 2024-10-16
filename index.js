@@ -1,30 +1,22 @@
-const chrome = require("chrome-aws-lambda");
-const puppeteer = require("puppeteer-core");
+const express = require('express');
+const puppeteer = require('puppeteer');
 
-exports.handler = async (event) => {
-  const stationName = event.queryStringParameters?.station || 'CENTRO'; // Estación por defecto
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+app.get('/api/stations', async (req, res) => {
+  const stationName = req.query.station || 'CENTRO';
   const url = `http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`;
 
-  let options = {};
-
-  if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
-    options = {
-      args: [...chrome.args, "--hide-scrollbars", "--disable-web-security"],
-      defaultViewport: chrome.defaultViewport,
-      executablePath: await chrome.executablePath,
-      headless: true,
-      ignoreHTTPSErrors: true,
-    };
-  }
-
-  let browser;
   try {
-    browser = await puppeteer.launch(options);
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
     const page = await browser.newPage();
-    
     await page.goto(url, { waitUntil: 'networkidle2' });
-    await page.waitForTimeout(2000);
 
+    // Esperar a que la tabla tenga datos válidos y no contenga "No datos"
     await page.waitForFunction(() => {
       const tbody = document.querySelector("#tablaIMK_wrapper tbody");
       return (
@@ -32,8 +24,9 @@ exports.handler = async (event) => {
         tbody.innerText.trim().length > 0 &&
         !tbody.innerText.includes("No datos")
       );
-    }, { timeout: 60000 });
+    }, { timeout: 60000 }); // Timeout aumentado a 60 segundos
 
+    // Extraer datos de la tabla
     const jsonData = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll("#tablaIMK_wrapper tbody tr"));
       return rows.map((row) => {
@@ -48,26 +41,18 @@ exports.handler = async (event) => {
 
     await browser.close();
 
+    // Verificar si hay datos válidos antes de enviar la respuesta
     if (jsonData.length === 0) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ message: 'No hay datos disponibles.' }),
-      };
+      return res.status(404).json({ message: 'No hay datos disponibles.' });
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ station: stationName, data: jsonData }),
-    };
-
+    res.json({ station: stationName, data: jsonData });
   } catch (error) {
     console.error('Error scraping data:', error);
-    if (browser) {
-      await browser.close();
-    }
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Error scraping data' }),
-    };
+    res.status(500).json({ error: 'Error scraping data' });
   }
-};
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
