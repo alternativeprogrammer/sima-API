@@ -1,14 +1,36 @@
-const express = require('express');
-const puppeteer = require('puppeteer');
+import express from 'express';
+import puppeteer from 'puppeteer';
+import cors from 'cors';
+import NodeCache from 'node-cache';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const CACHE_TTL = 300; // Cache for 5 minutes
+
+const cache = new NodeCache({ stdTTL: CACHE_TTL });
+
+app.use(cors());
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK' });
+});
 
 app.get('/api/stations', async (req, res) => {
-  const stationName = req.query.station || 'CENTRO';
-  const url = `http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`;
+  const stationName = req.query.station as string || 'CENTRO';
+  const cacheKey = `station_${stationName}`;
 
   try {
+    // Check cache first
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
+    const url = `http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`;
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -16,7 +38,6 @@ app.get('/api/stations', async (req, res) => {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2' });
 
-    // Esperar a que la tabla tenga datos válidos y no contenga "No datos"
     await page.waitForFunction(() => {
       const tbody = document.querySelector("#tablaIMK_wrapper tbody");
       return (
@@ -24,9 +45,8 @@ app.get('/api/stations', async (req, res) => {
         tbody.innerText.trim().length > 0 &&
         !tbody.innerText.includes("No datos")
       );
-    }, { timeout: 60000 }); // Timeout aumentado a 60 segundos
+    }, { timeout: 60000 });
 
-    // Extraer datos de la tabla
     const jsonData = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll("#tablaIMK_wrapper tbody tr"));
       return rows.map((row) => {
@@ -41,12 +61,16 @@ app.get('/api/stations', async (req, res) => {
 
     await browser.close();
 
-    // Verificar si hay datos válidos antes de enviar la respuesta
     if (jsonData.length === 0) {
       return res.status(404).json({ message: 'No hay datos disponibles.' });
     }
 
-    res.json({ station: stationName, data: jsonData });
+    const responseData = { station: stationName, data: jsonData };
+    
+    // Store in cache
+    cache.set(cacheKey, responseData);
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error scraping data:', error);
     res.status(500).json({ error: 'Error scraping data' });
