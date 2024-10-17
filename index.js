@@ -9,30 +9,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 const CACHE_TTL = 300; // Cache for 5 minutes
+
 const cache = new NodeCache({ stdTTL: CACHE_TTL });
 
 app.use(cors());
-
-const stations = [
-  "CENTRO",
-  "SURESTE",
-  "NORESTE",
-  "NOROESTE",
-  "SUROESTE",
-  "GARCIA",
-  "NORTE",
-  "NORESTE2",
-  "SURESTE2",
-  "[SAN Pedro]",
-  "SURESTE3",
-  "NORTE2",
-  "SUR"
-];
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK' });
 });
 
+// Endpoint para obtener datos de estaciones, usando datos desde la caché
 app.get('/api/stations', (req, res) => {
   const stationName = req.query.station || 'CENTRO';
   const cacheKey = `station_${stationName}`;
@@ -47,7 +33,7 @@ app.get('/api/stations', (req, res) => {
 });
 
 // Función para hacer el scraping y actualizar los datos en caché
-async function scrapeAndUpdateCache(stationName) {
+async function scrapeAndUpdateCache(stationName = 'CENTRO') {
   const cacheKey = `station_${stationName}`;
 
   try {
@@ -103,11 +89,9 @@ async function scrapeAndUpdateCache(stationName) {
   }
 }
 
-// Ejecutar el scraping automáticamente cada 90 segundos para todas las estaciones
+// Ejecutar el scraping automáticamente cada 90 segundos
 setInterval(() => {
-  stations.forEach(station => {
-    scrapeAndUpdateCache(station);
-  });
+  scrapeAndUpdateCache('CENTRO'); // Otras estaciones pueden ser añadidas aquí si lo necesitas
 }, 90000); // 90,000 milisegundos = 1.5 minutos
 
 process.on('uncaughtException', (error) => {
@@ -121,9 +105,6 @@ process.on('unhandledRejection', (reason, promise) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  
-  // Realizar scraping inicial para todas las estaciones
-  stations.forEach(station => {
-    scrapeAndUpdateCache(station);
-  });
+  // Iniciar el scraping la primera vez cuando el servidor empieza
+  scrapeAndUpdateCache('CENTRO'); // Realizar scraping inicial para no esperar 90 segundos
 });
