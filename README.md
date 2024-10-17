@@ -3,7 +3,7 @@
 Esta API permite capturar y estructurar datos de calidad del aire provenientes del **Sistema Integral de Monitoreo Ambiental (SIMA)** del estado de Nuevo León. El proyecto ofrece un endpoint funcional tanto en local como en producción, con el propósito de facilitar la obtención de datos en un formato JSON ordenado y consistente.
 
 ### Nota  
-Actualmente, la API se encuentra alojada en **Heroku**. Sin embargo, debido a razones personales y para reducir gastos por tráfico, la API se ha mantenido privada. Aun así, el código es completamente funcional para ejecutarse en entornos locales, por lo que eres libre de clonar este repositorio y probarlo. Agradezco que reconozcas mi trabajo si lo usas o lo adaptas en tus propios proyectos.
+Actualmente, la API se encuentra alojada en **Heroku**. Sin embargo, debido a razones personales y para reducir gastos por tráfico, el URL a la API se mantiene desactivada cuando yo quiero. Aun así, el código es completamente funcional para ejecutarse en entornos locales, por lo que eres libre de clonar este repositorio y probarlo. Agradezco que reconozcas mi trabajo si lo usas o lo adaptas en tus propios proyectos.
 
 ## ¿Qué datos captura esta API?  
 
