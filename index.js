@@ -1,8 +1,8 @@
-import express from 'express';
-import puppeteer from 'puppeteer';
-import cors from 'cors';
-import NodeCache from 'node-cache';
-import dotenv from 'dotenv';
+const express = require('express');
+const puppeteer = require('puppeteer');
+const cors = require('cors');
+const NodeCache = require('node-cache');
+const dotenv = require('dotenv');
 
 dotenv.config();
 
@@ -19,7 +19,7 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/api/stations', async (req, res) => {
-  const stationName = req.query.station as string || 'CENTRO';
+  const stationName = req.query.station || 'CENTRO';
   const cacheKey = `station_${stationName}`;
 
   try {
@@ -32,8 +32,14 @@ app.get('/api/stations', async (req, res) => {
     const url = `http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`;
 
     const browser = await puppeteer.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process'
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2' });
@@ -75,6 +81,15 @@ app.get('/api/stations', async (req, res) => {
     console.error('Error scraping data:', error);
     res.status(500).json({ error: 'Error scraping data' });
   }
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 app.listen(PORT, () => {
