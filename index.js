@@ -18,25 +18,17 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK' });
 });
 
-// Endpoint para obtener datos de estaciones, usando datos desde la caché
-app.get('/api/stations', (req, res) => {
+app.get('/api/stations', async (req, res) => {
   const stationName = req.query.station || 'CENTRO';
   const cacheKey = `station_${stationName}`;
 
-  // Obtener los datos desde la caché
-  const cachedData = cache.get(cacheKey);
-  if (cachedData) {
-    return res.json(cachedData);
-  }
-
-  res.status(404).json({ message: 'Datos no disponibles en este momento.' });
-});
-
-// Función para hacer el scraping y actualizar los datos en caché
-async function scrapeAndUpdateCache(stationName = 'CENTRO') {
-  const cacheKey = `station_${stationName}`;
-
   try {
+    // Check cache first
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const url = `http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`;
 
     const browser = await puppeteer.launch({
@@ -44,7 +36,7 @@ async function scrapeAndUpdateCache(stationName = 'CENTRO') {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--single-process',
+        '--single-process'
       ],
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
       headless: true,
@@ -75,24 +67,21 @@ async function scrapeAndUpdateCache(stationName = 'CENTRO') {
 
     await browser.close();
 
-    if (jsonData.length > 0) {
-      const responseData = { station: stationName, data: jsonData };
-      
-      // Actualizar los datos en caché
-      cache.set(cacheKey, responseData);
-      console.log(`Datos actualizados para la estación: ${stationName}`);
-    } else {
-      console.log(`No se encontraron datos para la estación: ${stationName}`);
+    if (jsonData.length === 0) {
+      return res.status(404).json({ message: 'No hay datos disponibles.' });
     }
-  } catch (error) {
-    console.error(`Error al hacer scraping para la estación ${stationName}:`, error);
-  }
-}
 
-// Ejecutar el scraping automáticamente cada 90 segundos
-setInterval(() => {
-  scrapeAndUpdateCache('CENTRO'); // Otras estaciones pueden ser añadidas aquí si lo necesitas
-}, 90000); // 90,000 milisegundos = 1.5 minutos
+    const responseData = { station: stationName, data: jsonData };
+    
+    // Store in cache
+    cache.set(cacheKey, responseData);
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error scraping data:', error);
+    res.status(500).json({ error: 'Error scraping data' });
+  }
+});
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
@@ -105,6 +94,4 @@ process.on('unhandledRejection', (reason, promise) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  // Iniciar el scraping la primera vez cuando el servidor empieza
-  scrapeAndUpdateCache('CENTRO'); // Realizar scraping inicial para no esperar 90 segundos
 });
