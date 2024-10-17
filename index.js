@@ -1,5 +1,5 @@
 const express = require('express');
-const { Cluster } = require('puppeteer-cluster');
+const puppeteer = require('puppeteer');
 const cors = require('cors');
 const NodeCache = require('node-cache');
 const dotenv = require('dotenv');
@@ -13,28 +13,6 @@ const CACHE_TTL = 300; // Cache for 5 minutes
 const cache = new NodeCache({ stdTTL: CACHE_TTL });
 
 app.use(cors());
-
-// Cluster setup
-let cluster;
-
-(async () => {
-  cluster = await Cluster.launch({
-    concurrency: Cluster.CONCURRENCY_PAGE, // Can also use Cluster.CONCURRENCY_CONTEXT
-    maxConcurrency: 15, // Adjust based on the load you expect
-    puppeteerOptions: {
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    },
-    timeout: 60 * 1000, // Set a timeout for each job to prevent hangs
-    monitor: true, // Optional: for logging and monitoring
-  });
-
-  // Event listener for errors in cluster tasks
-  cluster.on('taskerror', (err, data) => {
-    console.error(`Error crawling ${data}: ${err.message}`);
-  });
-})();
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK' });
@@ -51,62 +29,67 @@ app.get('/api/stations', async (req, res) => {
       return res.json(cachedData);
     }
 
-    // Define the task for Puppeteer Cluster
-    const data = await cluster.execute({
-      stationName,
-      url: `http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`,
-    }, async ({ page, data: { url, stationName } }) => {
-      await page.goto(url, { waitUntil: 'networkidle2' });
+    const url = `http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`;
 
-      // Wait for the table to load
-      await page.waitForFunction(() => {
-        const tbody = document.querySelector("#tablaIMK_wrapper tbody");
-        return (
-          tbody &&
-          tbody.innerText.trim().length > 0 &&
-          !tbody.innerText.includes("No datos")
-        );
-      }, { timeout: 60000 });
+    const browser = await puppeteer.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process'
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
+      headless: true,
+    });
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2' });
 
-      // Scrape the data
-      const jsonData = await page.evaluate(() => {
-        const rows = Array.from(document.querySelectorAll("#tablaIMK_wrapper tbody tr"));
-        return rows.map((row) => {
-          const cells = row.querySelectorAll("td");
-          return {
-            parametro: cells[0]?.innerText.trim() || '',
-            valor: cells[1]?.innerText.trim() || '',
-            descriptor: cells[2]?.innerText.trim() || '',
-          };
-        });
+    await page.waitForFunction(() => {
+      const tbody = document.querySelector("#tablaIMK_wrapper tbody");
+      return (
+        tbody &&
+        tbody.innerText.trim().length > 0 &&
+        !tbody.innerText.includes("No datos")
+      );
+    }, { timeout: 60000 });
+
+    const jsonData = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll("#tablaIMK_wrapper tbody tr"));
+      return rows.map((row) => {
+        const cells = row.querySelectorAll("td");
+        return {
+          parametro: cells[0]?.innerText.trim() || '',
+          valor: cells[1]?.innerText.trim() || '',
+          descriptor: cells[2]?.innerText.trim() || '',
+        };
       });
-
-      // Close the page
-      return { station: stationName, data: jsonData };
     });
 
-    if (!data || data.data.length === 0) {
+    await browser.close();
+
+    if (jsonData.length === 0) {
       return res.status(404).json({ message: 'No hay datos disponibles.' });
     }
 
+    const responseData = { station: stationName, data: jsonData };
+    
     // Store in cache
-    cache.set(cacheKey, data);
+    cache.set(cacheKey, responseData);
 
-    res.json(data);
+    res.json(responseData);
   } catch (error) {
     console.error('Error scraping data:', error);
     res.status(500).json({ error: 'Error scraping data' });
   }
 });
 
-// Graceful shutdown for the cluster
-process.on('SIGINT', async () => {
-  console.log('Gracefully shutting down the cluster...');
-  if (cluster) {
-    await cluster.idle();
-    await cluster.close();
-  }
-  process.exit(0);
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 app.listen(PORT, () => {
