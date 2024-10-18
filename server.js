@@ -5,8 +5,6 @@ const Queue = require('bull');
 
 const app = express();
 const port = process.env.PORT || 4000;
-
-// Redis client setup
 const redis = new Redis(process.env.REDIS_URL);
 
 // Bull queue setup
