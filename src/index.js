@@ -1,13 +1,11 @@
 export default {
 	async fetch(req) {
 	  try {
-		// Obtener el nombre de la estación desde la URL
 		const url = new URL(req.url);
-		const stationName = url.searchParams.get("station") || "CENTRO";  // Por defecto "CENTRO" si no se proporciona
+		const stationName = url.searchParams.get("station") || "CENTRO";
   
-		// Debug: Comenzamos con la estación
 		console.log(`Fetch estación ${stationName}`);
-		
+  
 		// Realizamos la petición PHP (sin await, no esperamos a que termine)
 		fetch(`http://aire.nl.gob.mx:81/SIMA2017reportes/ReporteDiariosimaIcars.php?estacion1=${stationName}`, {
 		  headers: {
@@ -18,11 +16,9 @@ export default {
 		  }
 		});
   
-		// Debug: Esperamos 1 segundo antes de hacer la solicitud JSON
 		console.log("Await 1 second");
-		await new Promise(resolve => setTimeout(resolve, 1000));  // Espera 1 segundo
+		await new Promise(resolve => setTimeout(resolve, 1000));
   
-		// Debug: Solicitando el archivo JSON
 		console.log("Await fetch .json");
 		const jsonResponse = await fetch('http://aire.nl.gob.mx:81/SIMA2017reportes/pages/ParamA_IAS.json', {
 		  headers: {
@@ -39,16 +35,17 @@ export default {
   
 		const data = await jsonResponse.json();
   
-		// Retornamos el JSON con los datos
-		const response = new Response(JSON.stringify(data), {
-		  headers: { "Content-Type": "application/json" },
-		});
+		const headers = {
+		  "Content-Type": "application/json",
+		  "Access-Control-Allow-Origin": "*",  // Permite cualquier origen
+		  "Access-Control-Allow-Methods": "GET, OPTIONS",  // Métodos permitidos
+		  "Access-Control-Allow-Headers": "Content-Type",  // Encabezados permitidos
+		};
   
-		// Debug de 2 segundos para simular una solicitud lenta
 		console.log("Await 2 seconds");
-		await new Promise(resolve => setTimeout(resolve, 2000));  // Espera 20 segundos
+		await new Promise(resolve => setTimeout(resolve, 2000));
   
-		return response;
+		return new Response(JSON.stringify(data), { headers });
   
 	  } catch (error) {
 		return new Response('Error: ' + error.message, { status: 500 });
