@@ -5,10 +5,21 @@ const Queue = require('bull');
 
 const app = express();
 const port = process.env.PORT || 4000;
-const redis = new Redis(process.env.REDIS_URL);
 
-// Bull queue setup
-const scrapingQueue = new Queue('scraping', process.env.REDIS_URL);
+// Redis and Bull setup
+const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const redis = new Redis(REDIS_URL);
+const scrapingQueue = new Queue('scraping', REDIS_URL);
+
+// Error handling for Redis
+redis.on('error', (error) => {
+  console.error('Redis connection error:', error);
+});
+
+// Error handling for Bull queue
+scrapingQueue.on('error', (error) => {
+  console.error('Bull queue error:', error);
+});
 
 async function scrapeStation(stationName) {
   const browser = await puppeteer.launch({
@@ -64,7 +75,7 @@ app.get('/api/station/:stationName', async (req, res) => {
     res.json({ status: 'scraping', message: 'Data is being scraped. Please check back later.' });
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ error: 'An error occurred while processing your request' });
+    res.status(500).json({ error: 'An error occurred while processing your request', details: error.message });
   }
 });
 
