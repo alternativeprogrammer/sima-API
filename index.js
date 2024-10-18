@@ -73,7 +73,6 @@ app.get('/api/stations', async (req, res) => {
 
     const responseData = { station: stationName, data: jsonData };
     
-    // Store in cache
     cache.set(cacheKey, responseData);
 
     res.json(responseData);
