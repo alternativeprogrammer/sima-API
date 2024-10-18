@@ -14,8 +14,14 @@ const scrapingQueue = new Queue('scraping', process.env.REDIS_URL);
 
 async function scrapeStation(stationName) {
   const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    headless: 'new', // Use new headless mode for better performance
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--single-process'
+    ],
+    headless: true,
+    defaultViewport: null,
   });
   const page = await browser.newPage();
   
