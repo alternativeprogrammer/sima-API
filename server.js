@@ -6,10 +6,24 @@ const Queue = require('bull');
 const app = express();
 const port = process.env.PORT || 4000;
 
-// Redis and Bull setup
+// Redis connection configuration
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-const redis = new Redis(REDIS_URL);
-const scrapingQueue = new Queue('scraping', REDIS_URL);
+const redisOptions = {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  retryStrategy(times) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+};
+
+// Create Redis client
+const redis = new Redis(REDIS_URL, redisOptions);
+
+// Create Bull queue
+const scrapingQueue = new Queue('scraping', REDIS_URL, {
+  redis: redisOptions
+});
 
 // Error handling for Redis
 redis.on('error', (error) => {
@@ -53,7 +67,7 @@ async function scrapeStation(stationName) {
 
     return data;
   } catch (error) {
-    console.error('An error occurred:', error);
+    console.error('An error occurred during scraping:', error);
     return null;
   } finally {
     await browser.close();
@@ -74,7 +88,7 @@ app.get('/api/station/:stationName', async (req, res) => {
     await scrapingQueue.add({ stationName });
     res.json({ status: 'scraping', message: 'Data is being scraped. Please check back later.' });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in API route:', error);
     res.status(500).json({ error: 'An error occurred while processing your request', details: error.message });
   }
 });
@@ -82,16 +96,29 @@ app.get('/api/station/:stationName', async (req, res) => {
 // Process scraping jobs
 scrapingQueue.process(async (job) => {
   const { stationName } = job.data;
-  const data = await scrapeStation(stationName);
-  
-  if (data) {
-    // Cache the result for 1 hour
-    await redis.set(`station:${stationName}`, JSON.stringify(data), 'EX', 3600);
+  try {
+    const data = await scrapeStation(stationName);
+    
+    if (data) {
+      // Cache the result for 1 hour
+      await redis.set(`station:${stationName}`, JSON.stringify(data), 'EX', 3600);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error processing scraping job:', error);
+    throw error; // Rethrow the error so Bull can handle it
   }
-  
-  return data;
 });
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  await scrapingQueue.close();
+  await redis.quit();
+  process.exit(0);
 });
