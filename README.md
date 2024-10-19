@@ -14,46 +14,50 @@ La API realiza **web scraping** de las páginas oficiales del SIMA, específicam
 El objetivo principal es capturar la primera gráfica que refleja la calidad del aire de forma resumida. La API organiza esta información en un JSON más accesible con la siguiente estructura:
 
 ```json
-{
-  "station": "CENTRO",
-  "data": [
-    {
-      "parametro": "Bióxido de azufre (SO2)",
-      "valor": "4.867",
-      "descriptor": "Bueno"
-    },
-    {
-      "parametro": "Bióxido de nitrógeno (NO2)",
-      "valor": "6.9",
-      "descriptor": "Bueno"
-    },
-    {
-      "parametro": "Monóxido de carbono (CO)",
-      "valor": "0.764",
-      "descriptor": "Bueno"
-    },
-    {
-      "parametro": "Ozono (O3)",
-      "valor": "40",
-      "descriptor": "Bueno"
-    },
-    {
-      "parametro": "Ozono (O3) promedio 8 hrs",
-      "valor": "37.125",
-      "descriptor": "Bueno"
-    },
-    {
-      "parametro": "Partículas menores a 10 micras (PM10)",
-      "valor": "25.181",
-      "descriptor": "Bueno"
-    },
-    {
-      "parametro": "Partículas menores a 2.5 micras (PM2.5)",
-      "valor": "8.035",
-      "descriptor": "Bueno"
-    }
-  ]
-}
+[
+  {
+    "Parameter": "SO2m",
+    "Date": "2024-10-19 17:00:00",
+    "HrAveData": 3.188,
+    "ParameterLargo": "Bióxido de azufre (SO2)"
+  },
+  {
+    "Parameter": "CO8m",
+    "Date": "2024-10-19 17:00:00",
+    "HrAveData": 0.91,
+    "ParameterLargo": "Monóxido de carbono (CO)"
+  },
+  {
+    "Parameter": "O38m",
+    "Date": "2024-10-19 17:00:00",
+    "HrAveData": 22.375,
+    "ParameterLargo": "Ozono (O3) promedio 8 hrs"
+  },
+  {
+    "Parameter": "O3m",
+    "Date": "2024-10-19 17:00:00",
+    "HrAveData": 24,
+    "ParameterLargo": "Ozono (O3)"
+  },
+  {
+    "Parameter": "NO2m",
+    "Date": "2024-10-19 17:00:00",
+    "HrAveData": 11.8,
+    "ParameterLargo": "Bióxido de nitrógeno (NO2)"
+  },
+  {
+    "Parameter": "PM10_12",
+    "Date": "2024-10-19 17:00:00",
+    "HrAveData": 22.556,
+    "ParameterLargo": "Partículas menores a 10 micras (PM10)"
+  },
+  {
+    "Parameter": "PM25_12",
+    "Date": "2024-10-19 17:00:00",
+    "HrAveData": 6.306,
+    "ParameterLargo": "Partículas menores a 2.5 micras (PM2.5)"
+  }
+]
 ```
 
 ## ¿Por qué se implementó de esta manera?  
